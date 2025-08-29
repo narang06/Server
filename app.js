@@ -139,6 +139,120 @@ app.get('/delete', async (req, res) => {
   }
 });
 
+app.get('/board/list', async (req, res) => {
+  const { option , keyWord } = req.query;
+  let subQuery = "";
+  if(option == "all"){
+    subQuery = ` WHERE TITLE LIKE '%${keyWord}%' OR USERID LIKE '%${keyWord}%'`;
+  } else if(option == "title"){
+    subQuery = ` WHERE TITLE LIKE '%${keyWord}%'`;
+  } else if(option == "user"){
+    subQuery = ` WHERE USERID LIKE '%${keyWord}%'`;
+  }
+  let query = `SELECT B.*, TO_CHAR(CDATETIME, 'YYYY-MM-DD') CTIME FROM TBL_BOARD B` + subQuery;
+  try {
+    const result = await connection.execute(query);
+    const columnNames = result.metaData.map(column => column.name);
+    // 쿼리 결과를 JSON 형태로 변환
+    const rows = result.rows.map(row => {
+      // 각 행의 데이터를 컬럼명에 맞게 매핑하여 JSON 객체로 변환
+      const obj = {};
+      columnNames.forEach((columnName, index) => {
+        obj[columnName] = row[index];
+      });
+      return obj;
+    });
+    res.json({
+        result : "success",
+        list : rows
+    });
+  } catch (error) {
+    console.error('Error executing query', error);
+    res.status(500).send('Error executing query');
+  }
+});
+
+app.get('/board/view', async (req, res) => {
+  const { boardNo } = req.query;
+  try {
+    await connection.execute(
+      `UPDATE TBL_BOARD SET CNT = CNT + 1 WHERE BOARDNO = :boardNo`,
+      [boardNo],
+      { autoCommit: true }
+    );
+    const result = await connection.execute(`SELECT B.*, TO_CHAR(CDATETIME, 'YYYY-MM-DD') CTIME FROM TBL_BOARD B WHERE BOARDNO = ${boardNo}`);
+    
+    const columnNames = result.metaData.map(column => column.name);
+
+    // 쿼리 결과를 JSON 형태로 변환
+    const rows = result.rows.map(row => {
+      // 각 행의 데이터를 컬럼명에 맞게 매핑하여 JSON 객체로 변환
+      const obj = {};
+      columnNames.forEach((columnName, index) => {
+        obj[columnName] = row[index];
+      });
+      return obj;
+    });
+    res.json(rows);
+  } catch (error) {
+    console.error('Error executing query', error);
+    res.status(500).send('Error executing query');
+  }
+});
+
+app.get('/board/delete', async (req, res) => {
+  const { boardNo } = req.query;
+
+  try {
+    await connection.execute(
+      `DELETE FROM TBL_BOARD WHERE BOARDNO = :boardNo`,
+      [boardNo],
+      { autoCommit: true }
+    );
+    res.json({
+        result : "success"
+    });
+  } catch (error) {
+    console.error('Error executing delete', error);
+    res.status(500).send('Error executing delete');
+  }
+});
+
+app.get('/board/insert', async (req, res) => {
+  const { title, userId, contents, kind } = req.query;
+  let query = `INSERT INTO TBL_BOARD VALUES(B_SEQ.NEXTVAL, '${title}', '${contents}', '${userId}', 0, 0, ${kind}, SYSDATE, SYSDATE)`
+  try {
+    await connection.execute(
+      query,     
+      [],
+      { autoCommit: true }
+    );
+    res.json({
+        result : "success"
+    });
+  } catch (error) {
+    console.error('Error executing insert', error);
+    res.status(500).send('Error executing insert');
+  }
+});
+
+app.get('/board/update', async (req, res) => {
+  const { title, userId, contents, kind, boardNo } = req.query;
+  try {
+    await connection.execute(
+      `UPDATE TBL_BOARD SET TITLE = :title, USERID = :userId, CONTENTS= :contents, KIND = :kind WHERE BOARDNO = :boardNo`,
+      [title, userId, contents, kind,boardNo],
+      { autoCommit: true }
+    );
+    res.json({
+        result : "success"
+    });
+  } catch (error) {
+    console.error('Error executing update', error);
+    res.status(500).send('Error executing update');
+  }
+});
+
 // 서버 시작
 app.listen(3009, () => {
   console.log('Server is running on port 3009');
