@@ -241,7 +241,7 @@ app.get('/board/update', async (req, res) => {
   try {
     await connection.execute(
       `UPDATE TBL_BOARD SET TITLE = :title, USERID = :userId, CONTENTS= :contents, KIND = :kind WHERE BOARDNO = :boardNo`,
-      [title, userId, contents, kind,boardNo],
+      [title, userId, contents, kind, boardNo],
       { autoCommit: true }
     );
     res.json({
@@ -250,6 +250,54 @@ app.get('/board/update', async (req, res) => {
   } catch (error) {
     console.error('Error executing update', error);
     res.status(500).send('Error executing update');
+  }
+});
+
+app.get('/login', async (req, res) => {
+  const { userId, pwd } = req.query;
+  let query = `SELECT * FROM TBL_USER WHERE USERID = '${userId}' AND PASSWORD = '${pwd}'`
+  try {
+    const result = await connection.execute(query);
+    
+    const columnNames = result.metaData.map(column => column.name);
+
+    // 쿼리 결과를 JSON 형태로 변환
+    const rows = result.rows.map(row => {
+      // 각 행의 데이터를 컬럼명에 맞게 매핑하여 JSON 객체로 변환
+      const obj = {};
+      columnNames.forEach((columnName, index) => {
+        obj[columnName] = row[index];
+      });
+      return obj;
+    });
+    res.json(rows);
+  } catch (error) {
+    console.error('Error executing query', error);
+    res.status(500).send('Error executing query');
+  }
+});
+
+app.get('/user/info', async (req, res) => {
+  const { userId } = req.query;
+  let query = `SELECT * FROM TBL_USER WHERE USERID = '${userId}'`
+  try {
+    const result = await connection.execute(query);
+    
+    const columnNames = result.metaData.map(column => column.name);
+
+    // 쿼리 결과를 JSON 형태로 변환
+    const rows = result.rows.map(row => {
+      // 각 행의 데이터를 컬럼명에 맞게 매핑하여 JSON 객체로 변환
+      const obj = {};
+      columnNames.forEach((columnName, index) => {
+        obj[columnName] = row[index];
+      });
+      return obj;
+    });
+    res.json(rows);
+  } catch (error) {
+    console.error('Error executing query', error);
+    res.status(500).send('Error executing query');
   }
 });
 
